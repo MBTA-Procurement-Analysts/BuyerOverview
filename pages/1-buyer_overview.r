@@ -3,7 +3,6 @@
 # Overview of Buyer Req information, per buyer
 
 
-
 # Setup Constants, Variables, Functions -----------------------------------
 
 # FY Month Factors, July first
@@ -29,20 +28,25 @@ buyers <- raw_req %>% distinct(Buyer)
 
 
 # Adds days between Approval and Requisition Date
-raw_buyer_req <- raw_req  %>%
-  mutate(Month = month(`Req Date`, label = TRUE, abbr = TRUE)) %>%
-  mutate_at("Month", ~parse_factor(., levels = fy_factors)) %>%
-  mutate(`Duration` = as.numeric(`Approval_Date` - `Req Date`, units="days")) %>%
-  arrange(desc(Duration)) %>%
-  select(Month, Duration, everything())
+(raw_buyer_req_line <- raw_req  %>%
+    mutate(Month = month(`Req Date`, label = TRUE, abbr = TRUE)) %>%
+    mutate_at("Month", ~parse_factor(., levels = fy_factors)) %>%
+    mutate(`Duration` = as.numeric(`PO Date` - `Req Date`, units="days")) %>%
+    filter(Duration >= 0) %>%
+    arrange(desc(Duration)) %>%
+    select(Month, Duration, everything()))
 
-# (raw_buyer_req <- raw_buyer_line %>%
-#     group_by(`Req ID`) %>%
-#     mutate(Req_Sum = sum(Amount)) %>%
-#     select(-`Req_Line`, -`Req Qty`, -`Item`, -`UOM`, -`More Info`, -`Description`, -`Product`, -`PO_Line`, -`Amount`) %>%
-#     ungroup(`Req ID`) %>%
-#     distinct())
 
+(raw_buyer_req_id <- raw_buyer_req_line %>%
+    group_by(`Req ID`) %>%
+    mutate(Req_Sum = sum(Amount)) %>%
+    mutate(Avg_Duration = mean(Duration)) %>%
+    select(-`Req_Line`, -`Req Qty`, -`Item`, -`UOM`, -`More Info`, -`Description`, -`Product`, -`PO_Line`, -`Amount`, -Duration, -`PO No.`, -`PO Date`, -Fund, -`Dept/Loc`) %>%
+    ungroup(`Req ID`) %>%
+    distinct())
+
+(raw_buyer_req <- raw_buyer_req_line  %>%
+    unite("Req ID", c("Req ID", "Req_Line"), sep = "_Ln"))
 
 # Plot Data ---------------------------------------------------------------
 
@@ -51,7 +55,7 @@ raw_buyer_req %>% plot_ly(x = ~(Approval_Date - `Req Date`), y = ~Amount, type =
 
 # Shiny UI Definition for this Page ---------------------------------------
 
-uiPage1 <- tabPanel("View by Buyers",
+uiPage1 <- tabPanel("Req by Buyers",
                     verticalLayout(
                       fluidRow(column(2,
                                       selectInput("buyer", "Buyer", choices = buyers),
@@ -60,4 +64,6 @@ uiPage1 <- tabPanel("View by Buyers",
                                       textOutput("pg1_viewing_buyer_1moago"),
                                       textOutput("pg1_viewing_buyer_2moago")),
                                column(10, plotlyOutput("pg1_main_plot_by_buyer"),
-                                      DT::dataTableOutput("pg1_main_dt_by_buyer")))))
+                                      DT::dataTableOutput("pg1_main_dt_by_buyer"),
+                                      h3("Outliers"),
+                                      DT::dataTableOutput("pg1_main_dt_by_buyer_outliers")))))

@@ -31,6 +31,8 @@ raw_buyer_req <- raw_req  %>%
   select(Month, Duration, everything())
 
 
+
+
 # Plot Data ---------------------------------------------------------------
 
 raw_buyer_req %>% ggplot() + geom_point(mapping = aes(x = Duration, y = Amount, color = `Business_Unit`)) + xlim(0, 100) + ylim(0,10000000)
