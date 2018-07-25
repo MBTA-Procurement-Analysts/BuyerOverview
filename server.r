@@ -48,7 +48,6 @@ function (input, output) {
     if (!length(selected)) {
       plot_default <- pg1_ct_shared_data %>%
         plot_ly(x = ~Duration_jitter,
-                y = ~Amount,
                 size = ~Amount,
                 type = 'scatter',
                 mode = 'markers',
