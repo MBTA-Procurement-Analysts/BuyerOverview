@@ -28,6 +28,7 @@ buyers <- raw_req %>% distinct(Buyer)
 
 
 # Adds days between Approval and Requisition Date
+# Line level Reqs
 (raw_buyer_req_line <- raw_req  %>%
     mutate(Month = month(`Req Date`, label = TRUE, abbr = TRUE)) %>%
     mutate_at("Month", ~parse_factor(., levels = fy_factors)) %>%
@@ -36,17 +37,25 @@ buyers <- raw_req %>% distinct(Buyer)
     arrange(desc(Duration)) %>%
     select(Month, Duration, everything()))
 
-
+# Req ID level Reqs
 (raw_buyer_req_id <- raw_buyer_req_line %>%
     group_by(`Req ID`) %>%
     mutate(Req_Sum = sum(Amount)) %>%
     mutate(Avg_Duration = mean(Duration)) %>%
-    select(-`Req_Line`, -`Req Qty`, -`Item`, -`UOM`, -`More Info`, -`Description`, -`Product`, -`PO_Line`, -`Amount`, -Duration, -`PO No.`, -`PO Date`, -Fund, -`Dept/Loc`) %>%
+    select(-`Req_Line`, -`Req Qty`, -`Item`, -`UOM`, -`More Info`,
+           -`Description`, -`Product`, -`PO_Line`, -`Amount`, -Duration, 
+           -`PO No.`, -`PO Date`, -Fund, -`Dept/Loc`) %>%
     ungroup(`Req ID`) %>%
-    distinct())
+    distinct() %>% 
+    rename(`Duration` = Avg_Duration, Amount = Req_Sum))
 
-(raw_buyer_req <- raw_buyer_req_line  %>%
-    unite("Req ID", c("Req ID", "Req_Line"), sep = "_Ln"))
+# Choose which Req Table for Plotly and DT
+# Req ID Level
+raw_buyer_req <- raw_buyer_req_id
+
+# Req Line Level, uniting Req ID and Line Number for displaying purposes 
+# (raw_buyer_req <- raw_buyer_req_line  %>%
+#     unite("Req ID", c("Req ID", "Req_Line"), sep = "_"))
 
 # Plot Data ---------------------------------------------------------------
 

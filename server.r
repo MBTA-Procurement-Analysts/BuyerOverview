@@ -17,21 +17,21 @@ function (input, output) {
   # Raw data with selected rows for plotly and Datatable, contains outliers
   pg1_reactive_raw_buyer_plot_dt_req <- reactive({
     filter(raw_buyer_req, Buyer == input$buyer) %>%
-      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, `PO Date`, Duration, `PO No.`, `Amount`)
+      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`)
   })
   
   # Raw data, with selected rows and no outliers
   # Outliers are defined by anything above 2x StdDev for Amount or Duration.
   pg1_reactive_99pct_buyer_plot_dt_req <- reactive({
     filter(raw_buyer_req, Buyer == input$buyer) %>%
-      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, `PO Date`, Duration, `PO No.`, `Amount`) %>%
+      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`) %>%
       filter(Amount < mean(Amount) + 2*sd(Amount) & Duration < mean(Duration) + 2*sd(Duration))
   })
   
   # Just the outliers
   pg1_reactive_outlier_buyer_plot_dt_req <- reactive({
     filter(raw_buyer_req, Buyer == input$buyer) %>%
-      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, `PO Date`, Duration, `PO No.`, `Amount`) %>%
+      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`) %>%
       filter(Amount >= mean(Amount) + 2*sd(Amount) | Duration >= mean(Duration) + 2*sd(Duration))
   })
   
@@ -116,11 +116,11 @@ function (input, output) {
                                                                    rownames = FALSE,
                                                                    colnames = c("Duration (Days)" = "Duration")) %>%
                                                        formatCurrency(c("Amount")) %>%
-                                                       formatDate(c("Approval_Date", "Req Date", "PO Date"), "toLocaleDateString"))
+                                                       formatDate(c("Approval_Date", "Req Date"), "toLocaleDateString"))
   
   output$pg1_main_dt_by_buyer_outliers <- DT::renderDataTable(DT::datatable(pg1_reactive_outlier_buyer_plot_dt_req(),
                                                                             rownames = FALSE,
                                                                             colnames = c("Duration (Days)" = "Duration")) %>%
                                                                 formatCurrency(c("Amount")) %>%
-                                                                formatDate(c("Approval_Date", "Req Date", "PO Date"), "toLocaleDateString"))
+                                                                formatDate(c("Approval_Date", "Req Date"), "toLocaleDateString"))
 }
