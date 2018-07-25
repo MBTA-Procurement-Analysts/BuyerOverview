@@ -49,9 +49,20 @@ buyers <- raw_req %>% distinct(Buyer)
     distinct() %>% 
     rename(`Duration` = Avg_Duration, Amount = Req_Sum))
 
+(raw_buyer_req_id_line_embedded <- raw_buyer_req_id %>% 
+    mutate(Lines_Table = "<i>Hello</i>") %>% 
+    mutate(Duration_jitter = jitter(Duration, amount = .5)))
+
+# (raw_buyer_req_id_line_embedded <- raw_buyer_req_id %>% 
+#   mutate(Lines_Table = (filter(raw_buyer_req_line, `Req ID` == raw_buyer_req_line$`Req ID`) %>%
+#                           top_n(5) %>% 
+#                           kable(escape = TRUE) %>% 
+#                           str_replace_all("[\r\n]", "") %>% 
+#                           str_replace_all("\"", "\\\""))))
+
 # Choose which Req Table for Plotly and DT
 # Req ID Level
-raw_buyer_req <- raw_buyer_req_id
+raw_buyer_req <- raw_buyer_req_id_line_embedded
 
 # Req Line Level, uniting Req ID and Line Number for displaying purposes 
 # (raw_buyer_req <- raw_buyer_req_line  %>%

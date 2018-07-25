@@ -17,21 +17,21 @@ function (input, output) {
   # Raw data with selected rows for plotly and Datatable, contains outliers
   pg1_reactive_raw_buyer_plot_dt_req <- reactive({
     filter(raw_buyer_req, Buyer == input$buyer) %>%
-      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`)
+      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`, Duration_jitter)
   })
   
   # Raw data, with selected rows and no outliers
   # Outliers are defined by anything above 2x StdDev for Amount or Duration.
   pg1_reactive_99pct_buyer_plot_dt_req <- reactive({
     filter(raw_buyer_req, Buyer == input$buyer) %>%
-      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`) %>%
+      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`, Lines_Table, Duration_jitter) %>%
       filter(Amount < mean(Amount) + 2*sd(Amount) & Duration < mean(Duration) + 2*sd(Duration))
   })
   
   # Just the outliers
   pg1_reactive_outlier_buyer_plot_dt_req <- reactive({
     filter(raw_buyer_req, Buyer == input$buyer) %>%
-      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`) %>%
+      select(`Req ID`, Status, Requester, `Req Date`, `Approval_Date`, Duration, `Amount`, Duration_jitter) %>%
       filter(Amount >= mean(Amount) + 2*sd(Amount) | Duration >= mean(Duration) + 2*sd(Duration))
   })
   
@@ -47,8 +47,9 @@ function (input, output) {
     # Not selected anything
     if (!length(selected)) {
       plot_default <- pg1_ct_shared_data %>%
-        plot_ly(x = ~Duration,
+        plot_ly(x = ~Duration_jitter,
                 y = ~Amount,
+                size = ~Amount,
                 type = 'scatter',
                 mode = 'markers',
                 color = I('blue')) %>%
@@ -58,8 +59,9 @@ function (input, output) {
       # If selected something, render everything first
       plot_selected <- pg1_reactive_99pct_buyer_plot_dt_req() %>%
         plot_ly() %>%
-        add_trace(x = ~Duration,
+        add_trace(x = ~Duration_jitter,
                   y = ~Amount,
+                  size = ~Amount,
                   type = 'scatter',
                   mode = 'markers',
                   color = I('blue')) %>%
@@ -68,8 +70,9 @@ function (input, output) {
       
       # Then render the selected rows
       plot_selected <- add_trace(plot_selected, data = pg1_reactive_99pct_buyer_plot_dt_req()[selected,],
-                                 x = ~Duration,
+                                 x = ~Duration_jitter,
                                  y = ~Amount,
+                                 size = ~Amount,
                                  type = 'scatter',
                                  mode = 'markers',
                                  color = I('red'), name = "Selected")
@@ -112,15 +115,37 @@ function (input, output) {
   
   # Datatable Definitions -------------------------------------------------
   
-  output$pg1_main_dt_by_buyer <- DT::renderDataTable(DT::datatable(pg1_reactive_99pct_buyer_plot_dt_req(),
-                                                                   rownames = FALSE,
-                                                                   colnames = c("Duration (Days)" = "Duration")) %>%
-                                                       formatCurrency(c("Amount")) %>%
-                                                       formatDate(c("Approval_Date", "Req Date"), "toLocaleDateString"))
+  # Child Row is enabled, this DT will read the 9th column (including the
+  #   RowNum) and put information there. The code will change after migration 
+  #   Rubrix since deta 
+  output$pg1_main_dt_by_buyer <- DT::renderDataTable(
+    DT::datatable(cbind(' ' = '&plusb;', pg1_reactive_99pct_buyer_plot_dt_req()), escape = c(-2, -9),
+                  options = list(
+                    columnDefs = list(
+                      list(visible = FALSE, targets = c(0, 9)),
+                      list(orderable = FALSE, className = 'details-control', targets = 1))),
+                  callback = JS("
+  table.column(1).nodes().to$().css({cursor: 'pointer'});
+  var format = function(d) {
+    return '<div style=\"background-color:#eee; padding: .5em;\"></div>';};
+  table.on('click', 'td.details-control', function() {
+    var td = $(this), row = table.row(td.closest('tr'));
+    if (row.child.isShown()) {
+      row.child.hide();
+      td.html('&plusb;');
+    } else {
+      row.child(format(row.data())).show();
+      td.html('&minusb;');
+    }
+  });"))
+    %>%
+      formatCurrency(c("Amount")) %>%
+      formatDate(c("Approval_Date", "Req Date"), "toLocaleDateString") %>% 
+      formatRound(c("Duration")))
   
   output$pg1_main_dt_by_buyer_outliers <- DT::renderDataTable(DT::datatable(pg1_reactive_outlier_buyer_plot_dt_req(),
-                                                                            rownames = FALSE,
-                                                                            colnames = c("Duration (Days)" = "Duration")) %>%
+                                                                            rownames = FALSE) %>%
                                                                 formatCurrency(c("Amount")) %>%
-                                                                formatDate(c("Approval_Date", "Req Date"), "toLocaleDateString"))
+                                                                formatDate(c("Approval_Date", "Req Date"), "toLocaleDateString") %>% 
+                                                                formatRound(c("Duration")))
 }
